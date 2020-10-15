@@ -17,9 +17,9 @@ router.get('/', function(req, res, next) {
         access_token_key: process.env.access_token,
         access_token_secret: process.env.access_token_secret
       });
-      client.get('search/tweets', { q: req.query.query,count: req.query.count,lang:  'en' }, function (error, tweets, response) {
+      client.get('search/tweets', { q: req.query.query, count: req.query.count,lang:  'en' }, function (error, tweets, response) {
         console.log(tweets);
-        var str = ""
+        var str = "";
         var i = 1;
         var total = 0;
         var array= [];
@@ -42,7 +42,7 @@ router.get('/', function(req, res, next) {
         if(totalScore<0){
           sentiment = "Negative";
         }else {
-          sentiment = "Possitive";
+          sentiment = "Positive";
         }
         res.json({ array,totalScore,sentiment });
       });
