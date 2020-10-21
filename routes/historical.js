@@ -26,6 +26,7 @@ let params = {
     Bucket: bucketName,
 };
 
+var filteredKeys = [];
 var allKeys = [];
 
 async function getAllKeys() {
@@ -53,8 +54,17 @@ async function getAllKeys() {
 
 /* GET */
 router.get('/', function(req, res, next) {
+
     getAllKeys();
-    res.json(allKeys);
+    const uniqueAllKeys = Array.from(new Set(allKeys));
+    filteredKeys.length = 0;
+    allKeys.forEach(function(key) {
+        if (key.startsWith(req.query.query + "-")) {
+            filteredKeys.push(key);
+        }
+    })
+    const uniqueFilteredKeys = Array.from(new Set(filteredKeys));
+    res.json(uniqueFilteredKeys);
     
     
 });
