@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 var AWS = require('aws-sdk');
 const { S3 } = require('aws-sdk');
+var async = require("async");
 
 
 // Setup AWS S3
@@ -19,53 +20,36 @@ bucketPromise.then(function(data) {
   
 })
 .catch(function(err) {
-  console.log(err);
 })
 
 let params = {
     Bucket: bucketName,
 };
 
-var filteredKeys = [];
 var allKeys = [];
 
-async function getAllKeys() {
-    await new AWS.S3({apiVersion: '2006-03-01'}).listObjectsV2(params, function (err, data) {
+
+
+/* GET */
+router.get('/', function(req, res, next) {
+    allKeys.length = 0;
+    return new AWS.S3({apiVersion: '2006-03-01'}).listObjectsV2(params, function (err, data) {
         if (err) {
             console.log(err)
         } else {
             var contents = data.Contents;
             contents.forEach(function(content) {
-                allKeys.push(content.Key);
+                if (content.Key.startsWith(req.query.query + "-")) {
+                    allKeys.push(content.Key);
+                }
             });
+            const uniqueAllKeys = Array.from(new Set(allKeys));
+            return res.json(uniqueAllKeys);
+            // NOTE: Only returns the first 1000 results. API limitation without recursion.
 
-            if (data.IsTruncated) {
-                params.ContinuationToken = data.NextContinuationToken;
-                getAllKeys();
-            }
         }
-    }).promise()
-    .then(function(data) {
-      })
-      .catch(function(error) {
-      })
-}
 
-
-/* GET */
-router.get('/', function(req, res, next) {
-
-    getAllKeys();
-    const uniqueAllKeys = Array.from(new Set(allKeys));
-    filteredKeys.length = 0;
-    allKeys.forEach(function(key) {
-        if (key.startsWith(req.query.query + "-")) {
-            filteredKeys.push(key);
-        }
-    })
-    const uniqueFilteredKeys = Array.from(new Set(filteredKeys));
-    res.json(uniqueFilteredKeys);
-    
+    });
     
 });
 
