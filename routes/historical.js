@@ -3,6 +3,7 @@ var router = express.Router();
 var AWS = require('aws-sdk');
 const { S3 } = require('aws-sdk');
 var async = require("async");
+require('dotenv').config();
 
 
 // Setup AWS S3

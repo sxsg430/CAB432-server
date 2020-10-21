@@ -1,4 +1,4 @@
-require('dotenv').config({ path: __dirname + '/.env' });
+require('dotenv').config();
 const express = require('express');
 const redis = require('redis');
 const router = express.Router();
@@ -88,6 +88,4 @@ router.get('/', function(req, res, next) {
         res.json({ array,totalScore,sentiment });
       });
     });    
-  }  // console.log(data);           // successful response
-}
 module.exports = router;
