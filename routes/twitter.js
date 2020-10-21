@@ -1,14 +1,15 @@
-var express = require('express');
-var router = express.Router();
-var Twitter = require('twitter');
+require('dotenv').config({ path: __dirname + '/.env' });
+const express = require('express');
+const redis = require('redis');
+const router = express.Router();
+const Twitter = require('twitter');
 const Sentiment = require('natural').SentimentAnalyzer;
 const stemmer = require('natural').PorterStemmer;
-const analyzer = new Sentiment("English",stemmer,'afinn');
+const analyzer = new Sentiment("English", stemmer, 'afinn');
 const natural = require("natural");
+const AWS = require('aws-sdk');
+const { json } = require('express');
 const tokenizer = new natural.WordTokenizer();
-require('dotenv').config();
-var AWS = require('aws-sdk');
-
 
 // Setup AWS S3
 AWS.config.getCredentials(function(err) {
@@ -18,6 +19,11 @@ AWS.config.getCredentials(function(err) {
   }
 })
 
+const redisClient = redis.createClient();
+redisClient.on('error', (err) => {
+    console.log("Error " + err);ß
+});
+
 const bucketName = 'n10225978-twitter';
 
 const bucketPromise = new AWS.S3({apiVersion: '2006-03-01'}).createBucket({Bucket: bucketName}).promise();
@@ -26,7 +32,6 @@ bucketPromise.then(function(data) {
 })
 .catch(function(err) {
 })
-
 
 
 
@@ -51,7 +56,10 @@ router.get('/', function(req, res, next) {
                           text: status.text,
                           score: sent}
           array.push(response);
+          
           const s3Key = req.query.query + "-" + status.id;
+          redisClient.set(s3Key,response.score);
+          
           const objectParams = {Bucket: bucketName, Key: s3Key, Body: JSON.stringify(response)};
           const uploadPromise = new AWS.S3({apiVersion: '2006-03-01'}).putObject(objectParams).promise();
           uploadPromise.then(function(data) {
@@ -79,6 +87,7 @@ router.get('/', function(req, res, next) {
         }
         res.json({ array,totalScore,sentiment });
       });
-});
-
+    });    
+  }  // console.log(data);           // successful response
+}
 module.exports = router;
