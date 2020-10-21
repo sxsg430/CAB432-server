@@ -10,7 +10,7 @@ const natural = require("natural");
 const AWS = require('aws-sdk');
 const { json } = require('express');
 const tokenizer = new natural.WordTokenizer();
-var latestID = 0;
+
 
 const client = new Twitter({
   consumer_key: process.env.api_key,
@@ -60,8 +60,10 @@ router.get('/:query/:number', function (req, res, next) {
     content.forEach(object =>{
       const download = new AWS.S3({ apiVersion: '2006-03-01' }).getObject({ Bucket: bucketName, Key: object.Key }).promise();
       download.then(function (rslt) {
-        
+      
           var result = JSON.parse(rslt.Body);
+          var redisKey = `${query}:${result.id}`; 
+          redisClient.set(redisKey,result.score);
           array.push(result);
           i++;
           total+= result.score;
