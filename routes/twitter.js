@@ -24,7 +24,7 @@ redisClient.on('error', (err) => {
     console.log("Error " + err);ß
 });
 
-const bucketName = 'n10225978-twitter';
+const bucketName = process.env.bucket;
 
 const bucketPromise = new AWS.S3({apiVersion: '2006-03-01'}).createBucket({Bucket: bucketName}).promise();
 bucketPromise.then(function(data) {
