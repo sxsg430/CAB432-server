@@ -17,7 +17,7 @@ router.get('/', function(req, res, next) {
         access_token_key: process.env.access_token,
         access_token_secret: process.env.access_token_secret
       });
-      client.get('search/tweets', { q: 'BLM',count: 100,lang:  'en' }, function (error, tweets, response) {
+      client.get('search/tweets', { q: req.query.query ,count: 100,lang:  'en' }, function (error, tweets, response) {
         console.log(tweets);
         var str = ""
         var i = 1;
@@ -25,13 +25,16 @@ router.get('/', function(req, res, next) {
         var array= [];
         tweets.statuses.forEach(status => {
           var sent = analyzer.getSentiment(tokenizer.tokenize(status.text));
-          array.push({id:  status.id, text: status.text, score: sent})
+          let response = {id: status.id,
+                          date: status.created_at,
+                          text: status.text,
+                          score: sent}
+          array.push(response);
           i++;
           if(Number.isNaN(sent)){
             sent = 0;
           }
           total += sent;
-          console.log(sent);
         });
         
         var totalScore = total/i;
