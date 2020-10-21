@@ -11,116 +11,83 @@ const AWS = require('aws-sdk');
 const { json } = require('express');
 const tokenizer = new natural.WordTokenizer();
 
+// Setup AWS S3
+AWS.config.getCredentials(function(err) {
+  if (err) console.log(err.stack);
+  else {
+    console.log("Keys found")
+  }
+})
 
-const client = new Twitter({
-  consumer_key: process.env.api_key,
-  consumer_secret: process.env.api_secret_key,
-  access_token_key: process.env.access_token,
-  access_token_secret: process.env.access_token_secret
-});
-
-// Create unique bucket name
-const bucketName = 'tweets-store-n9940669';
-// This section will change for Cloud Services
 const redisClient = redis.createClient();
 redisClient.on('error', (err) => {
     console.log("Error " + err);ß
 });
 
-// Create a promise on S3 service object
-const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01' })
-    .createBucket({ Bucket: bucketName })
-    .promise();
-bucketPromise.then(function (data) {
-    console.log("Successfully created " + bucketName);
-}).catch(function (err) {
-    console.error(err, err.stack);
-});
+const bucketName = 'n10225978-twitter';
+
+const bucketPromise = new AWS.S3({apiVersion: '2006-03-01'}).createBucket({Bucket: bucketName}).promise();
+bucketPromise.then(function(data) {
+  
+})
+.catch(function(err) {
+})
 
 
 
 /* GET */
-
-router.get('/:query/:number', function (req, res, next) {
-  const query = req.params.query;
-  var i = 1;
-  var total = 0;
-  var array = [];
-
- var s3Params = {
-  Bucket: bucketName, 
-  Prefix: query
- };
- var s3 = new AWS.S3();
- s3.listObjectsV2(s3Params, function(err, data) {
-  if (err) console.log(err, err.stack); // an error occurred
-  else  {
-
-    var content = data.Contents;
-    content.forEach(object =>{
-      const download = new AWS.S3({ apiVersion: '2006-03-01' }).getObject({ Bucket: bucketName, Key: object.Key }).promise();
-      download.then(function (rslt) {
-      
-          var result = JSON.parse(rslt.Body);
-          var redisKey = `${query}:${result.id}`; 
-          redisClient.set(redisKey,result.score);
-          array.push(result);
+router.get('/', function(req, res, next) {
+    var client = new Twitter({
+        consumer_key: process.env.api_key,
+        consumer_secret: process.env.api_secret_key,
+        access_token_key: process.env.access_token,
+        access_token_secret: process.env.access_token_secret
+      });
+      client.get('search/tweets', { q: req.query.query ,count: 100,lang:  'en' }, function (error, tweets, response) {
+        //console.log(tweets);
+        var str = ""
+        var i = 1;
+        var total = 0;
+        var array= [];
+        tweets.statuses.forEach(status => {
+          var sent = analyzer.getSentiment(tokenizer.tokenize(status.text));
+          let response = {id: status.id,
+                          date: status.created_at,
+                          text: status.text,
+                          score: sent}
+          array.push(response);
+          
+          const s3Key = req.query.query + "-" + status.id;
+          redisClient.set(s3Key,response.score);
+          
+          const objectParams = {Bucket: bucketName, Key: s3Key, Body: JSON.stringify(response)};
+          const uploadPromise = new AWS.S3({apiVersion: '2006-03-01'}).putObject(objectParams).promise();
+          uploadPromise.then(function(data) {
+            console.log('Successfully uploaded data to ' + bucketName + '/' + s3Key);
+          })
+          .catch(function(error) {
+            console.log(error)
+          })
           i++;
-          total+= result.score;
+          if(Number.isNaN(sent)){
+            sent = 0;
+          }
+          total += sent;
+        });
+        
+        var totalScore = total/i;
+        var sentiment ="";
+        //console.log(total)
+        //console.log(i)
+        //console.log(totalScore)
+        if(totalScore<0){
+          sentiment = "Negative";
+        }else {
+          sentiment = "Positive";
+        }
+        res.json({ array,totalScore,sentiment });
       });
     });    
   }  // console.log(data);           // successful response
-
-
- });
-  client.get('search/tweets', { q: query, count: req.params.number, lang: 'en' }, function (error, tweets, response) {
- 
-    tweets.statuses.forEach(status => {
-      var sent = analyzer.getSentiment(tokenizer.tokenize(status.text));
-      if (Number.isNaN(sent)) {
-        sent = 0;
-      }
- 
-      var tweet = { id: status.id, text: status.text, score: sent };
- 
-      storeTweet(query,tweet)
-  
-      array.push(tweet);
-      i++;
-    
-      total += sent;
-      console.log(sent);
-    });
-
-    var totalScore = total / i;
-    var sentiment = "";
-    console.log(total)
-    console.log(i)
-    console.log(totalScore)
-    if (totalScore < 0) {
-      sentiment = "Negative";
-    } else {
-      sentiment = "Possitive";
-    }
-
-    res.json({ array, totalScore, sentiment });
-  });
-});
-
-
-function storeTweet(query,tweet){
-
-  const redisKey = `${query}:${tweet.id}`; 
-  const s3Key = `${query}-${tweet.id}`;
-
-  const objectParams = { Bucket: bucketName, Key: s3Key, Body: JSON.stringify(tweet)};
-
-  const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
-  uploadPromise.then(function (data) {
-      console.log("Successfully uploaded data to " + bucketName + "/" + s3Key);
-      redisClient.set(redisKey,tweet.score);
-  });
-  
-  return;
 }
 module.exports = router;
