@@ -58,7 +58,7 @@ router.get('/', async (req, res, next) => {
                         console.log(error);
                     }
                 )
-                if (allKeys.length === templength) {
+                if (allKeys.length === contents.length) {
                     return res.send(allKeys);
                 }
                 
