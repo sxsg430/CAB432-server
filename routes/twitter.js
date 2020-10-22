@@ -44,13 +44,16 @@ router.get('/', function(req, res, next) {
         access_token_secret: process.env.access_token_secret
       });
       client.get('search/tweets', { q: req.query.query ,count: 100,lang:  'en' }, function (error, tweets, response) {
-        //console.log(tweets);
-        var str = ""
         var i = 1;
         var total = 0;
         var array= [];
+
         tweets.statuses.forEach(status => {
           var sent = analyzer.getSentiment(tokenizer.tokenize(status.text));
+          if(Number.isNaN(sent)){
+            sent = 0;
+          }
+
           let response = {id: status.id,
                           date: status.created_at,
                           text: status.text,
@@ -59,8 +62,9 @@ router.get('/', function(req, res, next) {
           
           const s3Key = req.query.query + "-" + status.id;
           redisClient.set(s3Key,response.score);
-          
+        
           const objectParams = {Bucket: bucketName, Key: s3Key, Body: JSON.stringify(response)};
+
           const uploadPromise = new AWS.S3({apiVersion: '2006-03-01'}).putObject(objectParams).promise();
           uploadPromise.then(function(data) {
             console.log('Successfully uploaded data to ' + bucketName + '/' + s3Key);
@@ -69,17 +73,12 @@ router.get('/', function(req, res, next) {
             console.log(error)
           })
           i++;
-          if(Number.isNaN(sent)){
-            sent = 0;
-          }
           total += sent;
+
         });
         
         var totalScore = total/i;
         var sentiment ="";
-        //console.log(total)
-        //console.log(i)
-        //console.log(totalScore)
         if(totalScore<0){
           sentiment = "Negative";
         }else {
