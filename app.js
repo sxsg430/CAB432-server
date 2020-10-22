@@ -10,6 +10,7 @@ var usersRouter = require('./routes/users');
 var twitterRouter = require('./routes/twitter');
 var historicalRouter = require('./routes/historical');
 var historicalTwRouter = require('./routes/historicaltweet');
+var scoreRouter = require('./routes/scores');
 
 var app = express();
 app.use(cors());
@@ -29,6 +30,7 @@ app.use('/users', usersRouter);
 app.use('/twitter', twitterRouter);
 app.use('/historical', historicalRouter);
 app.use('/historicaltweet', historicalTwRouter);
+app.use('/scores', scoreRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
