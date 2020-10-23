@@ -30,37 +30,44 @@ let params = {
 };
 
 var allKeys = [];
-
+var querykey = "";
+function filterKey(key) {
+    return key.Key.startsWith(querykey);
+}
 
 
 /* GET */
 router.get('/', async (req, res, next) => {
     allKeys.length = 0;
+    querykey = req.query.query;
     new AWS.S3({apiVersion: '2006-03-01'}).listObjectsV2(params, function (err, data) {
         if (err) {
             console.log(err)
         } else {
             var contents = data.Contents;
+            contents = contents.filter(filterKey)
             var localArr = [];
             contents.forEach(async (element) => {
-                let Lparams = {
-                    Bucket: bucketName,
-                    Key: element.Key
-                };
-                var s3b = await new AWS.S3({apiVersion: '2006-03-01'}).getObject(Lparams);
-                var s3p = s3b.promise();
-
-                await s3p.then(
-                    function(data) {
-                        allKeys.push(data.Body.toString('utf-8'));
-                    },
-                    function(error) {
-                        console.log(error);
+                    let Lparams = {
+                        Bucket: bucketName,
+                        Key: element.Key
+                    };
+                    var s3b = await new AWS.S3({apiVersion: '2006-03-01'}).getObject(Lparams);
+                    var s3p = s3b.promise();
+    
+                    await s3p.then(
+                        function(data) {
+                            console.log(data)
+                            allKeys.push(data.Body.toString('utf-8'));
+                        },
+                        function(error) {
+                            console.log(error);
+                        }
+                    )
+                    if (allKeys.length === contents.length) {
+                        return res.send(allKeys);
                     }
-                )
-                if (allKeys.length === contents.length) {
-                    return res.send(allKeys);
-                }
+                
                 
             })
         }
