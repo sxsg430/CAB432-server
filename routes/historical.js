@@ -1,6 +1,5 @@
 var express = require('express');
 var router = express.Router();
-//var router = require("express-promise-router")();
 var AWS = require('aws-sdk');
 const { S3 } = require('aws-sdk');
 var async = require("async");

@@ -19,7 +19,7 @@ AWS.config.getCredentials(function(err) {
   }
 })
 
-const redisClient = redis.createClient();
+const redisClient = redis.createClient(process.env.redis_port, process.env.redis_addr);
 redisClient.on('error', (err) => {
     console.log("Error " + err);
 });

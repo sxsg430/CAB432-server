@@ -8,7 +8,7 @@ var async = require("async");
 require('dotenv').config();
 
 var allScores = [];
-const redisClient = redis.createClient();
+const redisClient = redis.createClient(process.env.redis_port, process.env.redis_addr);
 
 /* GET */
 router.get('/', function(req, res, next) {
